@@ -1,7 +1,8 @@
 import json
 import numpy
-import string
-from Vocabulary import Vocabulary
+from nltk.stem.porter import PorterStemmer
+from nltk.tokenize import RegexpTokenizer
+from sklearn.feature_extraction import text
 from TfIdf import TfIdf
 
 
@@ -57,16 +58,21 @@ class LoadData:
                 line_count += 1
 
     # Create Vocabulary from Raw Samples
-    def parse_questions(self, v):
+    def parse_questions(self):
+        stemmer = PorterStemmer()
+        tokenizer = RegexpTokenizer(r'\w+')
         for questions_key in self.rawSamples:
-            # This returns a list of data associated with question key.
-            # Currently, question_text is stored as the first element of the list. (Can change to dict later)
             question_text = self.rawSamples[questions_key][0]
-            exclude = set(string.punctuation)
-            word_array = (''.join(ch for ch in question_text if ch not in exclude)).split()
-            for word in word_array:
-                v.add_word(word)
-        pass
+            words_array = tokenizer.tokenize(question_text)
+            question_text = ""
+            for word in words_array:
+                if word.isnumeric():
+                    continue
+                if word not in text.ENGLISH_STOP_WORDS:
+                    word = stemmer.stem(word)
+                word = stemmer.stem(word)
+                question_text += (word + " ")
+            self.rawSamples[questions_key][0] = question_text
 
     # For Debugging
     def load_statistics(self):
@@ -74,12 +80,44 @@ class LoadData:
         print "Number of Training Samples - ", len(self.trainingData)
         print "Number of Test Samples - ", len(self.testData)
 
+    def get_rawsamples(self):
+        return self.rawSamples
 
-# Launch File
+    # Modify the threshold for defining whether two documents are similar or not.
+    def boolean_similarity(self, similarity):
+        if similarity > 0.80:
+            return 1
+        else:
+            return 0
+
+    def test_data(self, tfidf):
+        index1 = -1
+        index2 = -1
+        f = open("sample_output.out", "w")
+        for i in range(0, len(self.testData)):
+            # Currently Linear search (Another level of Hash to be implemented here)
+            j = 0
+            for key in self.rawSamples:
+                if key == self.testData[i][0]:
+                    index1 = j
+                elif key == self.testData[i][1]:
+                    index2 = j
+                j += 1
+
+            similarity = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # Cosine similarity returns a list of a list.
+            f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity)) + "\n")
+        f.close()
+
+# Launch Codes
+
+# Step 1 - Data is read from file "duplicate_sample.in" in same directory
 ld = LoadData()
-v = Vocabulary()
 tfidf = TfIdf()
+# Step 2 - Verify correct loading
 ld.load_statistics()
-ld.parse_questions(v)
-tfidf.get_vector()
-print "Length of TF-IDF vector -", v.get_vocabulary_size()
+# Step 3 - Parse questions (stop word removal, stemming)
+ld.parse_questions()
+# Step 4 - Create tf-idf matrix for all documents
+tfidf.create_tfidf_matrix(ld.get_rawsamples())
+# Step 5 - Call cosine similarity for test pairs.
+ld.test_data(tfidf)
