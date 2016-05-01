@@ -108,6 +108,25 @@ class LoadData:
             f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity)) + "\n")
         f.close()
 
+    def test_accuracy(self):
+        y = []  # Actual values
+        yhat = []   # Predicted values
+        with open('sample_output.out') as f:    # File we create in test_data()
+            for line in f:
+                yhat.append(line.split()[2])
+        with open('duplicate_sample.out') as f:  # Answers file given to us by Quora
+            for line in f:
+                y.append(line.split()[2])
+
+        correct = 0
+        for i in range(0, len(y)):
+            if y[i] == yhat[i]:
+                correct += 1
+
+        accuracy = correct * 1.0 / len(y)
+        print "Accuracy is ", accuracy
+
+
 # Launch Codes
 
 # Step 1 - Data is read from file "duplicate_sample.in" in same directory
@@ -121,3 +140,5 @@ ld.parse_questions()
 tfidf.create_tfidf_matrix(ld.get_rawsamples())
 # Step 5 - Call cosine similarity for test pairs.
 ld.test_data(tfidf)
+# Step 6 - Calculate accuracy
+ld.test_accuracy()
