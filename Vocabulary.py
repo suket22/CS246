@@ -14,3 +14,6 @@ class Vocabulary:
     # Vocabulary Size = Size of TF-IDF vector
     def get_vocabulary_size(self):
         return len(self.words)
+
+    def get_vocabulary(self):
+        return self.words

@@ -2,6 +2,7 @@ import json
 import numpy
 import string
 from Vocabulary import Vocabulary
+from TfIdf import TfIdf
 
 
 class LoadData:
@@ -76,7 +77,9 @@ class LoadData:
 
 # Launch File
 ld = LoadData()
-ld.load_statistics()
 v = Vocabulary()
+tfidf = TfIdf()
+ld.load_statistics()
 ld.parse_questions(v)
+tfidf.get_vector()
 print "Length of TF-IDF vector -", v.get_vocabulary_size()
