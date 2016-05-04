@@ -6,6 +6,7 @@ from sklearn.feature_extraction import text
 from TfIdf import TfIdf
 from nltk.corpus import wordnet as wn
 
+
 class LoadData:
     rawSampleCount = 0
     rawSamples = {}  # Map of Question Key -> Question Text
@@ -15,7 +16,7 @@ class LoadData:
 
     testCount = 0
     testData = None  # Define numpy array once size is known
-    threshold = 0.76
+    threshold = 0.75
 
     def __init__(self):
         self.read_data()
@@ -33,8 +34,23 @@ class LoadData:
                     self.rawSampleCount = int(line)
                 elif line_count <= self.rawSampleCount:
                     j = json.loads(line)
-                    list_data = list()  # Add extra data here.
+                    list_data = list()
+
+                    # Adding question text
                     list_data.append(j[u'question_text'])
+
+                    # Adding context topic
+                    if j[u'context_topic'] is not None:
+                        list_data.append(j[u'context_topic'][u'name'])
+                    else:
+                        list_data.append("")
+
+                    # Adding all other topics together as single string
+                    topics = ""
+                    for i in range(0, len(j[u'topics'])):
+                        topics += (j[u'topics'][i][u'name'] + " ")
+
+                    list_data.append(topics)
                     self.rawSamples[j[u'question_key']] = list_data
                 elif line_count == self.rawSampleCount + 1:
                     self.trainingCount = int(line)
@@ -54,7 +70,6 @@ class LoadData:
                     self.testData[test_index][0] = split_line[0]
                     self.testData[test_index][1] = split_line[1]
                     test_index += 1
-                    pass
                 line_count += 1
 
     # Create Vocabulary from Raw Samples
@@ -123,12 +138,15 @@ class LoadData:
                     index2 = j
                 j += 1
 
-            similarity = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # Cosine similarity returns a list of a list.
+            similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
+            similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = 0
-            if similarity < self.threshold:  # Don't run heuristic if tf-idf is very confident.
+            if similarity1 < self.threshold:  # Don't run heuristic if tf-idf is very confident.
                 heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
-            similarity += (heuristic * 0.1)
-            f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity)) + "\n")
+                similarity1 += (heuristic * 0.15)
+            if similarity2 < self.threshold - 0.2:    # If elements have low topic similarity, drop their overall similarity
+                similarity1 -= (similarity2 * 0.08)
+            f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity1)) + "\n")
         f.close()
 
     def test_accuracy(self):
@@ -179,6 +197,7 @@ ld.load_statistics()
 ld.parse_questions()
 # Step 4 - Create tf-idf matrix for all documents
 tfidf.create_tfidf_matrix(ld.get_rawsamples())
+tfidf.create_tfidf_topics(ld.get_rawsamples())
 # Step 5 - Call cosine similarity for test pairs.
 ld.test_data(tfidf)
 # Step 6 - Calculate accuracy
