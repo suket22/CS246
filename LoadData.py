@@ -4,10 +4,9 @@ from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from sklearn.feature_extraction import text
 from TfIdf import TfIdf
-
+from nltk.corpus import wordnet as wn
 
 class LoadData:
-
     rawSampleCount = 0
     rawSamples = {}  # Map of Question Key -> Question Text
 
@@ -16,6 +15,7 @@ class LoadData:
 
     testCount = 0
     testData = None  # Define numpy array once size is known
+    threshold = 0.76
 
     def __init__(self):
         self.read_data()
@@ -33,7 +33,7 @@ class LoadData:
                     self.rawSampleCount = int(line)
                 elif line_count <= self.rawSampleCount:
                     j = json.loads(line)
-                    list_data = []  # Add extra data here.
+                    list_data = list()  # Add extra data here.
                     list_data.append(j[u'question_text'])
                     self.rawSamples[j[u'question_key']] = list_data
                 elif line_count == self.rawSampleCount + 1:
@@ -85,10 +85,29 @@ class LoadData:
 
     # Modify the threshold for defining whether two documents are similar or not.
     def boolean_similarity(self, similarity):
-        if similarity > 0.90:
+        if similarity > self.threshold:
             return 1
         else:
             return 0
+
+    def heuristic_synscore(self, question_key1, question_key2):
+        question_text1 = self.rawSamples[question_key1][0].split()
+        question_text2 = self.rawSamples[question_key2][0].split()
+        synonym_count = 0
+        for word in question_text1:
+            matched_lemmas = list()
+            synonyms = wn.synsets(word)  # Find synonym sets for each word in question 1
+            if len(synonyms) == 0:
+                continue
+            for i in range(0, len(synonyms)):
+                lemma_names = synonyms[i].lemma_names() # Consider synonyms from synonym set 'i'
+                for lemma in lemma_names:   # For each such synonym
+                    # If synonym is in question 2
+                    if lemma in question_text2 and lemma not in matched_lemmas and lemma not in question_text1:
+                        matched_lemmas.append(lemma)
+                        # DEBUG print "Lemma match!", lemma
+                        synonym_count += 1
+        return synonym_count
 
     def test_data(self, tfidf):
         index1 = -1
@@ -105,6 +124,10 @@ class LoadData:
                 j += 1
 
             similarity = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # Cosine similarity returns a list of a list.
+            heuristic = 0
+            if similarity < self.threshold:  # Don't run heuristic if tf-idf is very confident.
+                heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
+            similarity += (heuristic * 0.1)
             f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity)) + "\n")
         f.close()
 
