@@ -36,7 +36,7 @@ class TfIdf:
         question_list = []
         for key in rawSamples:
             question_list.append(rawSamples[key][0])
-        count_vect.fit_transform(question_list)
+        trained_counts = count_vect.fit_transform(question_list)
 
         # Comment following 6 lines if synonyms are not desired.
         self.add_to_samples(count_vect, rawSamples) # Count_vect contains feature_names which is == the vocabulary.
