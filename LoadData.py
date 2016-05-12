@@ -77,6 +77,7 @@ class LoadData:
         stemmer = PorterStemmer()
         tokenizer = RegexpTokenizer(r'\w+')
         for questions_key in self.rawSamples:
+            # Stem the Question Text
             question_text = self.rawSamples[questions_key][0]
             words_array = tokenizer.tokenize(question_text)
             question_text = ""
@@ -88,6 +89,19 @@ class LoadData:
                 word = stemmer.stem(word)
                 question_text += (word + " ")
             self.rawSamples[questions_key][0] = question_text
+
+            # Stem the topic names
+            topics_text = self.rawSamples[questions_key][2]
+            words_array = tokenizer.tokenize(topics_text)
+            topics_text = ""
+            for word in words_array:
+                if word.isnumeric():
+                    continue
+                if word not in text.ENGLISH_STOP_WORDS:
+                    word = stemmer.stem(word)
+                word = stemmer.stem(word)
+                topics_text += (word + " ")
+            self.rawSamples[questions_key][2] = topics_text
 
     # For Debugging
     def load_statistics(self):
@@ -144,8 +158,8 @@ class LoadData:
             if similarity1 < self.threshold:  # Don't run heuristic if tf-idf is very confident.
                 heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
                 similarity1 += (heuristic * 0.15)
-            if similarity2 < self.threshold - 0.2:    # If elements have low topic similarity, drop their overall similarity
-                similarity1 -= (similarity2 * 0.08)
+            if similarity2 < self.threshold - 0.3:    # If elements have low topic similarity, drop their overall similarity
+                similarity1 -= (similarity2 * 0.20)
             f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity1)) + "\n")
         f.close()
 

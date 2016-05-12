@@ -2,7 +2,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.feature_extraction import text
 from sklearn.metrics.pairwise import cosine_similarity
-
+from sklearn.preprocessing import Normalizer
+from sklearn.decomposition import TruncatedSVD
+from scipy import sparse
 
 class TfIdf:
 
@@ -18,12 +20,15 @@ class TfIdf:
         for key in rawSamples:
             question_list.append(rawSamples[key][0])
         trained_counts = count_vect.fit_transform(question_list)
-
         self.tfidf_matrix = TfidfTransformer().fit_transform(trained_counts)
+        # # SVD is dropping the accuracy
+        # lsa = TruncatedSVD(n_components=50)
+        # dtm_lsa = lsa.fit_transform(self.tfidf_matrix)
+        # dtm_lsa = Normalizer(copy=False).fit_transform(dtm_lsa)
+        # self.tfidf_matrix = sparse.csr_matrix(dtm_lsa)
         print "Shape of TF-IDF matrix ", self.tfidf_matrix.shape
         print "\nNumber of reduced terms : ", self.tfidf_matrix.shape[1]
         # IMPORTANT - Ordering of question strings in TF-IDF matrix is same as order in rawSamples.
-
 
     # TF-IDF matrix only for topics, context_topics.
     def create_tfidf_topics(self, rawSamples):
