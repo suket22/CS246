@@ -30,15 +30,15 @@ def get_similarquestions(questionKey, keyToIndex, indexToKey, testKey):
     similarQuestions = sorted(enumerate(similarQuestions), key=lambda item: -item[1])
     testIndex = keyToIndex[testKey]
 
-    for ind in similarQuestions:
-        if ind[0] == testIndex:
-            return 1 if ind[1]>0.98 else 0
+    # for ind in similarQuestions:
+    #     if ind[0] == testIndex:
+    #         return 1 if ind[1]>0.98 else 0
 
-    # for top10 in range(0,10):
-    #    # print similarQuestions[top10]
-    #     if similarQuestions[top10][0] == testIndex:
-    #         return 1
-    # return 0
+    for top10 in range(0,10):
+       # print similarQuestions[top10]
+        if similarQuestions[top10][0] == testIndex:
+            return 1
+    return 0
 
 
 
