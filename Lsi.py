@@ -11,9 +11,67 @@ def create_dictionary(rawSamples):
     corpora.MmCorpus.serialize('gensim_corpus.mm', corpus)
 
 
+def create_lsimodelindex():
+    dictionary = corpora.Dictionary.load('gensim_dictionary.dict')
+    corpus = corpora.MmCorpus('gensim_corpus.mm')
+    lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=50)
+    lsi.save('gensim_lsimodel.lsi')
+    index = similarities.MatrixSimilarity(lsi[corpus])
+    index.save('gensim_lsindex.index')
+
+
+def get_similarquestions(questionKey, keyToIndex, indexToKey, testKey):
+    corpus = corpora.MmCorpus('gensim_corpus.mm')
+    lsi = models.LsiModel.load('gensim_lsimodel.lsi')
+    index = similarities.MatrixSimilarity(lsi[corpus])
+    i = keyToIndex[questionKey]
+    vecLsi = lsi[corpus[i]]
+    similarQuestions = index[vecLsi]
+    similarQuestions = sorted(enumerate(similarQuestions), key=lambda item: -item[1])
+    testIndex = keyToIndex[testKey]
+
+    for ind in similarQuestions:
+        if ind[0] == testIndex:
+            return 1 if ind[1]>0.98 else 0
+
+    # for top10 in range(0,10):
+    #    # print similarQuestions[top10]
+    #     if similarQuestions[top10][0] == testIndex:
+    #         return 1
+    # return 0
+
+
+
+    # print similarQuestions[0:5]
+    # print similarQuestions[1][1]
+    # for iter in range(0,5):
+    #     print indexToKey[similarQuestions[iter][0]]
+    # findIndex = keyToIndex["AAEAAOZreqlKsP0uctqEK8b58qdLGuPG3LQQ4Hr2dRiSy7KF"]
+    # print findIndex
+    # for item in similarQuestions:
+    #     if item[0] == findIndex:
+    #         print(item)
+
+
+def fire_lsi(data,filename):
+    rawData = data.get_rawsamples()
+    create_dictionary(rawData)
+    create_lsimodelindex()
+    # questionKey = "AAEAAJU9VfJqzjKYP0FFFuYD4Y5dNxuqwFqYxzfLGTL9wZi2"
+    f = open(filename, "w")
+    for i in range(0, len(data.testData)):
+        print ">>> Data Sample " + str(i + 1)
+        questionKey = data.testData[i][0]
+        print questionKey
+        testKey = data.testData[i][1]
+        print testKey
+        duplicate = get_similarquestions(questionKey, data.keyToIndex, data.indexToKey, testKey)
+        f.write(data.testData[i][0] + " " + data.testData[i][1] + " " + str(duplicate) + "\n")
+    f.close()
+
+
 data = Data()
 data.load_statistics()
 data.parse_questions()
-rawData = data.get_rawsamples()
-print rawData[19445][0]
-create_dictionary(rawData)
+filename = 'sample_output_lsi.out'
+fire_lsi(data,filename)
