@@ -1,10 +1,12 @@
 import json
 import numpy
+import pandas as pd
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from sklearn.feature_extraction import text
 from TfIdf import TfIdf
 from nltk.corpus import wordnet as wn
+from sklearn.linear_model import LogisticRegression
 
 
 class LoadData:
@@ -138,6 +140,7 @@ class LoadData:
                         synonym_count += 1
         return synonym_count
 
+    # Original Function -> Writes test data similarity prediction into file
     def test_data(self, tfidf):
         index1 = -1
         index2 = -1
@@ -163,6 +166,7 @@ class LoadData:
             f.write(self.testData[i][0] + " " + self.testData[i][1] + " " + str(self.boolean_similarity(similarity1)) + "\n")
         f.close()
 
+    # Original Function -> Tests accuracy based on some prediction
     def test_accuracy(self):
         y = []  # Actual values
         yhat = []   # Predicted values
@@ -199,6 +203,42 @@ class LoadData:
         print "F Score is", f_score
         print "Accuracy is ", accuracy
 
+    def create_training_data(self, tfidf):
+        index1 = -1
+        index2 = -1
+        f = open("sample_output.out", "w")
+        for i in range(0, len(self.trainingData)):
+            # Currently Linear search (Another level of Hash to be implemented here)
+            j = 0
+            for key in self.rawSamples:
+                if key == self.trainingData[i][0]:
+                    index1 = j
+                elif key == self.trainingData[i][1]:
+                    index2 = j
+                j += 1
+
+            similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
+            similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
+            heuristic = self.heuristic_synscore(self.trainingData[i][0], self.trainingData[i][1])
+            f.write(self.trainingData[i][0] + "," + self.trainingData[i][1] + "," + self.trainingData[i][2][0] + "," + str(similarity1) + "," + str(similarity2) + "," + str(heuristic) + "\n")
+        f.close()
+
+    def create_model(self):
+            data = pd.read_csv('sample_output.out', header=None,
+                               names=['QID1', 'QID2', 'Similarity', 'TFIDF', 'Topic', 'Synonym'])
+            print data.head()
+            print data.shape
+
+            feature_cols = ['TFIDF', 'Topic', 'Synonym']
+            X = data[feature_cols]
+            y = data.Similarity
+
+            # instantiate, fit
+            model = LogisticRegression()
+            model.fit(X, y)
+
+            # Model creation
+            print model.score(X, y)
 
 # Launch Codes
 
@@ -212,7 +252,11 @@ ld.parse_questions()
 # Step 4 - Create tf-idf matrix for all documents
 tfidf.create_tfidf_matrix(ld.get_rawsamples())
 tfidf.create_tfidf_topics(ld.get_rawsamples())
-# Step 5 - Call cosine similarity for test pairs.
-ld.test_data(tfidf)
-# Step 6 - Calculate accuracy
-ld.test_accuracy()
+# Step 5 - Call cosine similarity for test pairs and accuracy
+# ld.test_data(tfidf)
+# ld.test_accuracy()
+
+# ML Method
+# Create training data and train a model using logistic regression.
+ld.create_training_data(tfidf)
+ld.create_model()
