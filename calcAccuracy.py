@@ -33,6 +33,3 @@ def test_accuracy(filename):
     print "Recall is", recall
     print "F Score is", f_score
     print "Accuracy is ", accuracy
-
-filename = 'sample_output_lsi.out'
-test_accuracy(filename)

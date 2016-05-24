@@ -1,71 +1,28 @@
+import os.path
 from Data import Data
-from sklearn.feature_extraction import text
-from gensim import corpora, models, similarities
+import GensimFunctions as gen
+from calcAccuracy import test_accuracy
 
 
-def create_dictionary(rawSamples):
-    texts = [[word for word in question[0].lower().split()] for question in rawSamples]
-    dictionary = corpora.Dictionary(texts)
-    dictionary.save('gensim_dictionary.dict')
-    corpus = [dictionary.doc2bow(text) for text in texts]
-    corpora.MmCorpus.serialize('gensim_corpus.mm', corpus)
-
-
-def create_hdpmodelindex():
-    dictionary = corpora.Dictionary.load('gensim_dictionary.dict')
-    corpus = corpora.MmCorpus('gensim_corpus.mm')
-    hdp = models.HdpModel(corpus, id2word=dictionary)
-    hdp.save('gensim_hdpmodel.hdp')
-    index = similarities.MatrixSimilarity(hdp[corpus])
-    index.save('gensim_hdpndex.index')
-
-
-def get_similarquestions(questionKey, keyToIndex, indexToKey, testKey):
-    corpus = corpora.MmCorpus('gensim_corpus.mm')
-    hdp = models.HdpModel.load('gensim_hdpmodel.hdp')
-    index = similarities.MatrixSimilarity(hdp[corpus])
+def isSimilar(corpus, hdpModel, hdpIndex, questionKey, testKey, keyToIndex, indexToKey):
     i = keyToIndex[questionKey]
-    vecHdp = hdp[corpus[i]]
-    similarQuestions = index[vecHdp]
+    vecHdp = hdpModel[corpus[i]]
+    similarQuestions = hdpIndex[vecHdp]
     similarQuestions = sorted(enumerate(similarQuestions), key=lambda item: -item[1])
     testIndex = keyToIndex[testKey]
-
-#     for ind in similarQuestions:
-#         if ind[0] == testIndex:
-#             return 1 if ind[1]>0.98 else 0
-
-    for top10 in range(0,10):
-       # print similarQuestions[top10]
+    for top10 in range(0, 10):
         if similarQuestions[top10][0] == testIndex:
             return 1
     return 0
 
 
-
-    # print similarQuestions[0:5]
-    # print similarQuestions[1][1]
-    # for iter in range(0,5):
-    #     print indexToKey[similarQuestions[iter][0]]
-    # findIndex = keyToIndex["AAEAAOZreqlKsP0uctqEK8b58qdLGuPG3LQQ4Hr2dRiSy7KF"]
-    # print findIndex
-    # for item in similarQuestions:
-    #     if item[0] == findIndex:
-    #         print(item)
-
-
-def fire_hdp(data,filename):
-    rawData = data.get_rawsamples()
-    create_dictionary(rawData)
-    create_hdpmodelindex()
-    # questionKey = "AAEAAJU9VfJqzjKYP0FFFuYD4Y5dNxuqwFqYxzfLGTL9wZi2"
+def fire_hdp(data, corpus, hdpModel, hdpIndex, filename):
     f = open(filename, "w")
     for i in range(0, len(data.testData)):
-        #print ">>> Data Sample " + str(i + 1)
+        print ">>> Data Sample " + str(i + 1)
         questionKey = data.testData[i][0]
-        #print questionKey
         testKey = data.testData[i][1]
-        #print testKey
-        duplicate = get_similarquestions(questionKey, data.keyToIndex, data.indexToKey, testKey)
+        duplicate = isSimilar(corpus, hdpModel, hdpIndex, questionKey, testKey, data.keyToIndex, data.indexToKey)
         f.write(data.testData[i][0] + " " + data.testData[i][1] + " " + str(duplicate) + "\n")
     f.close()
 
@@ -73,5 +30,23 @@ def fire_hdp(data,filename):
 data = Data()
 data.load_statistics()
 data.parse_questions()
+
+fname_hdpModel = 'gensim_hdpmodel.hdp'
+fname_hdpIndex = 'gensim_hdpindex.index'
+fname_corpus = 'gensim_corpus.mm'
+fname_dictionary = 'gensim_dictionary.dict'
+
+if (not (os.path.isfile(fname_corpus) and os.path.isfile(fname_dictionary))):
+    (dictionary, corpus) = gen.create_dictionary(data.rawSamples)
+else:
+    (dictionary, corpus) = gen.load_dictcorpus()
+if (not (os.path.isfile(fname_hdpIndex) and os.path.isfile(fname_hdpModel))):
+    (hdpModel, hdpIndex) = gen.create_hdpmodelindex(dictionary, corpus)
+else:
+    (hdpModel, hdpIndex) = gen.load_hdpmodelindex()
+
 filename = 'sample_output_hdp.out'
-fire_hdp(data,filename)
+fire_hdp(data, corpus, hdpModel, hdpIndex, filename)
+
+print('---------------------------')
+test_accuracy(filename)
