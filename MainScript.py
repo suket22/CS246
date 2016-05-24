@@ -1,6 +1,8 @@
 from Data import Data
 from Lsi import fire_lsi
+from Lda import fire_lda
 from calcAccuracy import test_accuracy
+import GensimFunctions as gen
 
 # Load Data and parse it
 data = Data()
@@ -19,13 +21,32 @@ data.parse_questions()
 
 # Testing Context Topics
 
+# Generating Dictionary and Corpus for gensim 
+(dictionary, corpus) = gen.create_dictionary(data.rawSamples)
+
+# --------------------------LSI-------------------------------
+# LSI Model Building
+numOfTopics = 100
+(lsiModel, lsiIndex) = gen.create_lsimodelindex(dictionary, corpus, numOfTopics)
+
 # LSI --> Generate output file
 filename = 'sample_output_lsi.out'
-fire_lsi(data,filename)
+fire_lsi(data, corpus, lsiModel, lsiIndex, filename)
 
 # Testing LSI
 test_accuracy(filename)
 
+# --------------------------LDA-------------------------------
+# LDA Model Building
+numOfTopics = 100
+(ldaModel, ldaIndex) = gen.create_ldamodelindex(dictionary, corpus, numOfTopics)
+
 # LDA --> Generate output file
+filename = 'sample_output_lda.out'
+fire_lda(data, corpus, ldaModel, ldaIndex, filename)
 
 # Testing LDA
+test_accuracy(filename)
+
+# --------------------------LDA-------------------------------
+# LDA Model Building
