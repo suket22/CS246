@@ -6,8 +6,8 @@ from scipy import spatial
 from calcAccuracy import test_accuracy
 import csv
 
-
-def isSimilar(model, questionText1, questionText2, useCosine, filename):
+x = []
+def isSimilar(model, questionText1, questionText2, filename, useCosine):
     question1_vector = np.zeros((300), dtype=np.float32)
     question2_vector = np.zeros((300), dtype=np.float32)
     for word in questionText1.split():
@@ -20,22 +20,21 @@ def isSimilar(model, questionText1, questionText2, useCosine, filename):
             question2_vector += model[word]
         except:
             pass
-    cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
-    print cosine_sim
-    list=[questionText1,questionText2,cosine_sim]
-    with open(filename, "a") as fp:
-        wr = csv.writer(fp, dialect='excel')
-        wr.writerow(list)
-    if cosine_sim > 0.90:
-        return 1
-    return 0
+    #cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
+    
+    
 
     if useCosine:
         cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
+        x.append(cosine_sim)
         print cosine_sim
-        if cosine_sim > 0.90:
-            return 1
-        return 0
+        f = open(filename,'a')
+    	f.write(questionText1 + "," + questionText2 + "," + repr(cosine_sim) + "\n")
+    	f.close()
+    	if cosine_sim > 0.90:
+        	return 1
+   	 return 0
+  
     else:
         difference = abs(question1_vector - question2_vector)
         norm = LA.norm(difference)
@@ -44,6 +43,11 @@ def isSimilar(model, questionText1, questionText2, useCosine, filename):
             return 1
         return 0
 
+def get_cosinefile(filename):
+    f = open(filename, "w")
+    for item in x:
+        f.write(str(item)+"\n")
+    f.close()
 
 def fire_word2vec(data, model, filename, useCosine):
     f = open(filename, "w")
@@ -65,8 +69,8 @@ data.parse_questions_no_stemming()
 model = models.Word2Vec.load_word2vec_format('googleWord2Vec.bin', binary=True)
 
 filename = 'sample_output_word2vec.out'
-useCosine = False
+useCosine = True
 fire_word2vec(data, model, filename, useCosine)
-
+get_cosinefile('word2vec_cosine.txt')
 print('---------------------------')
 test_accuracy(filename)
