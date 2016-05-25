@@ -64,7 +64,7 @@ class Data:
     def parse_questions(self):
         stemmer = PorterStemmer()
         tokenizer = RegexpTokenizer(r'\w+')
-        for index in range(0,len(self.rawSamples)):
+        for index in range(0, len(self.rawSamples)):
             words_array = tokenizer.tokenize(self.rawSamples[index][0].lower())
             question_text = ""
             for word in words_array:
@@ -72,6 +72,19 @@ class Data:
                     continue
                 if word not in text.ENGLISH_STOP_WORDS:
                     word = stemmer.stem(word)
+                    question_text += (word + " ")
+            self.rawSamples[index][0] = question_text
+
+    # Add a boolean variable for this to above later!
+    def parse_questions_no_stemming(self):
+        tokenizer = RegexpTokenizer(r'\w+')
+        for index in range(0, len(self.rawSamples)):
+            words_array = tokenizer.tokenize(self.rawSamples[index][0].lower())
+            question_text = ""
+            for word in words_array:
+                if word.isnumeric():
+                    continue
+                if word not in text.ENGLISH_STOP_WORDS:
                     question_text += (word + " ")
             self.rawSamples[index][0] = question_text
 
@@ -84,9 +97,3 @@ class Data:
     # Returning Raw Samples - List of Lists
     def get_rawsamples(self):
         return self.rawSamples
-
-#data = Data()
-#data.load_statistics()
-#data.parse_questions()
-#rawData = data.get_rawsamples()
-#print rawData[0][0]
