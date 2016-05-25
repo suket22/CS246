@@ -7,8 +7,11 @@ from sklearn.feature_extraction import text
 from TfIdf import TfIdf
 from nltk.corpus import wordnet as wn
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm
 from sklearn import linear_model
+from Data import Data
+import GensimFunctions as gf
 
 
 class LoadData:
@@ -25,6 +28,7 @@ class LoadData:
     model_linear = None
     model_SVM = None
     rawSample_indexhash = dict()
+    data = Data()
 
     def __init__(self):
         self.read_data()
@@ -220,30 +224,39 @@ class LoadData:
             self.rawSample_indexhash[key] = j
             j += 1
 
+        dictionary, corpus = gf.load_dictcorpus()
         for i in range(0, len(self.trainingData)):
+            print i
             index1 = self.rawSample_indexhash[self.trainingData[i][0]]
             index2 = self.rawSample_indexhash[self.trainingData[i][1]]
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.trainingData[i][0], self.trainingData[i][1])
-            f.write(self.trainingData[i][0] + "," + self.trainingData[i][1] + "," + self.trainingData[i][2][0] + "," + str(similarity1) + "," + str(similarity2) + "," + str(heuristic) + "\n")
+            lsi_score = gf.get_lsisim(self.data, corpus, self.trainingData[i][0], self.trainingData[i][1])
+            lda_score = gf.get_ldasim(self.data, corpus, self.trainingData[i][0], self.trainingData[i][1])
+            f.write(self.trainingData[i][0] + "," + self.trainingData[i][1] + "," + self.trainingData[i][2][0] + ","
+                    + str(similarity1) + "," + str(similarity2) + "," + str(heuristic) +
+                    "," +str(lsi_score) + "," + str(lda_score) + "\n")
         f.close()
 
     def create_model(self):
             data = pd.read_csv('sample_output.out', header=None,
-                               names=['QID1', 'QID2', 'Similarity', 'TFIDF', 'Topic', 'Synonym'])
+                               names=['QID1', 'QID2', 'Similarity', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA'])
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym']
+            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA']
             X = data[feature_cols]
             y = data.Similarity
 
             # instantiate, fit
-            # self.model_SVM = svm.SVC()
-            # self.model_SVM.fit(X, y)
+            self.model_SVM = svm.SVC()
+            self.model_SVM.fit(X, y)
             self.model_logistic = LogisticRegression()
             self.model_logistic.fit(X, y)
+            # self.model_logistic = RandomForestClassifier(n_estimators=10)
+            # self.model_logistic.fit(X, y)
+
             # self.model_linear = linear_model.LinearRegression()
             # self.model_linear.fit(X, y)
 
@@ -253,6 +266,8 @@ class LoadData:
     def create_testing_data(self, tfidf):
         index1 = -1
         index2 = -1
+        dictionary, corpus = gf.load_dictcorpus()
+
         f = open("sample_output.out", "w")
         for i in range(0, len(self.testData)):
             index1 = self.rawSample_indexhash[self.testData[i][0]]
@@ -260,20 +275,24 @@ class LoadData:
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
+            lsi_score = gf.get_lsisim(self.data, corpus, self.testData[i][0], self.testData[i][1])
+            lda_score = gf.get_ldasim(self.data, corpus, self.testData[i][0], self.testData[i][1])
             f.write(self.testData[i][0] + "," + self.testData[i][1] + "," + str(similarity1) + ","
-                    + str(similarity2) + "," + str(heuristic) + "\n")
+                    + str(similarity2) + "," + str(heuristic) + ","
+                    + str(lsi_score) + "," + str(lda_score) + "\n")
 
     def test_model(self):
             data = pd.read_csv('sample_output.out', header=None,
-                               names=['QID1', 'QID2', 'TFIDF', 'Topic', 'Synonym'])
+                               names=['QID1', 'QID2', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA'])
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym']
+            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA']
             X = data[feature_cols]
 
             # Predict Values
-            yhat = self.model_logistic.predict(X)
+            # yhat = self.model_logistic.predict(X)
+            yhat = self.model_SVM.predict(X)
 
             # Actual Values
             y = []
