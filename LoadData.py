@@ -19,6 +19,7 @@ class LoadData:
     testCount = 0
     testData = None  # Define numpy array once size is known
     threshold = 0.75
+    model = None
 
     def __init__(self):
         self.read_data()
@@ -234,11 +235,76 @@ class LoadData:
             y = data.Similarity
 
             # instantiate, fit
-            model = LogisticRegression()
-            model.fit(X, y)
+            self.model = LogisticRegression()
+            self.model.fit(X, y)
 
             # Model creation
-            print model.score(X, y)
+            print "Accuracy on Training Data", self.model.score(X, y)
+
+    def create_testing_data(self, tfidf):
+        index1 = -1
+        index2 = -1
+        f = open("sample_output.out", "w")
+        for i in range(0, len(self.testData)):
+            # Currently Linear search (Another level of Hash to be implemented here)
+            j = 0
+            for key in self.rawSamples:
+                if key == self.testData[i][0]:
+                    index1 = j
+                elif key == self.testData[i][1]:
+                    index2 = j
+                j += 1
+
+            similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
+            similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
+            heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
+            f.write(self.testData[i][0] + "," + self.testData[i][1] + "," + str(similarity1) + ","
+                    + str(similarity2) + "," + str(heuristic) + "\n")
+
+    def test_model(self):
+            data = pd.read_csv('sample_output.out', header=None,
+                               names=['QID1', 'QID2', 'TFIDF', 'Topic', 'Synonym'])
+            print data.head()
+            print data.shape
+
+            feature_cols = ['TFIDF', 'Topic', 'Synonym']
+            X = data[feature_cols]
+
+            # Predict Values
+            yhat = self.model.predict(X)
+
+            # Actual Values
+            y = []
+            with open('duplicate_sample.out') as f:  # Answers file given to us by Quora
+                for line in f:
+                    y.append(int(line.split()[2]))
+
+            # Calculate accuracy!
+            truep = 0
+            truen = 0
+            falsep = 0
+            falsen = 0
+            for i in range(0, len(y)):
+                if y[i] == yhat[i] and y[i] == 1:
+                    truep += 1
+                elif y[i] == yhat[i] and y[i] == 0:
+                    truen += 1
+                elif y[i] != yhat[i] and yhat[i] == 1:
+                    falsep += 1
+                else:
+                    falsen += 1
+            print "True Positive - ", truep
+            print "True Negative - ", truen
+            print "False Positive - ", falsep
+            print "False Negative - ", falsen
+            precision = truep * 1.0 / (truep + falsep)
+            recall = truep * 1.0 / (truep + falsen)
+            f_score = (precision * recall * 2) / (precision + recall)
+            accuracy = (truep + truen) * 1.0 / len(y)
+            print "Precision is", precision
+            print "Recall is", recall
+            print "F Score is", f_score
+            print "Accuracy is ", accuracy
 
 # Launch Codes
 
@@ -258,5 +324,12 @@ tfidf.create_tfidf_topics(ld.get_rawsamples())
 
 # ML Method
 # Create training data and train a model using logistic regression.
+print "Forming Training Data set"
 ld.create_training_data(tfidf)
+print "Creating Model"
 ld.create_model()
+print "Forming Testing Data set"
+ld.create_testing_data(tfidf)
+print "Testing Model!"
+ld.test_model()
+
