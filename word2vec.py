@@ -21,11 +21,10 @@ def isSimilar(model, questionText1, questionText2, useCosine, filename):
         except:
             pass
     cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
-    print cosine_sim
-    list=[questionText1,questionText2,cosine_sim]
-    with open(filename, "a") as fp:
-        wr = csv.writer(fp, dialect='excel')
-        wr.writerow(list)
+    
+    f = open(filename,'a')
+    f.write(questionText1 + "," + questionText2 + "," + repr(cosine_sim) + "\n")
+    f.close()
     if cosine_sim > 0.90:
         return 1
     return 0
