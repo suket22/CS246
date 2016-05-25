@@ -7,6 +7,8 @@ from sklearn.feature_extraction import text
 from TfIdf import TfIdf
 from nltk.corpus import wordnet as wn
 from sklearn.linear_model import LogisticRegression
+from sklearn import svm
+from sklearn import linear_model
 
 
 class LoadData:
@@ -19,7 +21,10 @@ class LoadData:
     testCount = 0
     testData = None  # Define numpy array once size is known
     threshold = 0.75
-    model = None
+    model_logistic = None
+    model_linear = None
+    model_SVM = None
+    rawSample_indexhash = dict()
 
     def __init__(self):
         self.read_data()
@@ -208,16 +213,16 @@ class LoadData:
         index1 = -1
         index2 = -1
         f = open("sample_output.out", "w")
-        for i in range(0, len(self.trainingData)):
-            # Currently Linear search (Another level of Hash to be implemented here)
-            j = 0
-            for key in self.rawSamples:
-                if key == self.trainingData[i][0]:
-                    index1 = j
-                elif key == self.trainingData[i][1]:
-                    index2 = j
-                j += 1
 
+        # Creating additional hash for (QID -> Index of QID in rawSamples)
+        j = 0
+        for key in self.rawSamples:
+            self.rawSample_indexhash[key] = j
+            j += 1
+
+        for i in range(0, len(self.trainingData)):
+            index1 = self.rawSample_indexhash[self.trainingData[i][0]]
+            index2 = self.rawSample_indexhash[self.trainingData[i][1]]
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.trainingData[i][0], self.trainingData[i][1])
@@ -235,26 +240,23 @@ class LoadData:
             y = data.Similarity
 
             # instantiate, fit
-            self.model = LogisticRegression()
-            self.model.fit(X, y)
+            # self.model_SVM = svm.SVC()
+            # self.model_SVM.fit(X, y)
+            self.model_logistic = LogisticRegression()
+            self.model_logistic.fit(X, y)
+            # self.model_linear = linear_model.LinearRegression()
+            # self.model_linear.fit(X, y)
 
             # Model creation
-            print "Accuracy on Training Data", self.model.score(X, y)
+            print "Accuracy on Training Data", self.model_logistic.score(X, y)
 
     def create_testing_data(self, tfidf):
         index1 = -1
         index2 = -1
         f = open("sample_output.out", "w")
         for i in range(0, len(self.testData)):
-            # Currently Linear search (Another level of Hash to be implemented here)
-            j = 0
-            for key in self.rawSamples:
-                if key == self.testData[i][0]:
-                    index1 = j
-                elif key == self.testData[i][1]:
-                    index2 = j
-                j += 1
-
+            index1 = self.rawSample_indexhash[self.testData[i][0]]
+            index2 = self.rawSample_indexhash[self.testData[i][1]]
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
@@ -271,7 +273,7 @@ class LoadData:
             X = data[feature_cols]
 
             # Predict Values
-            yhat = self.model.predict(X)
+            yhat = self.model_logistic.predict(X)
 
             # Actual Values
             y = []
@@ -332,4 +334,5 @@ print "Forming Testing Data set"
 ld.create_testing_data(tfidf)
 print "Testing Model!"
 ld.test_model()
+
 
