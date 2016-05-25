@@ -12,6 +12,7 @@ from sklearn import svm
 from sklearn import linear_model
 from Data import Data
 import GensimFunctions as gf
+import os.path
 
 
 class LoadData:
@@ -29,6 +30,7 @@ class LoadData:
     model_SVM = None
     rawSample_indexhash = dict()
     data = Data()
+    dictionary, corpus = gf.load_dictcorpus()
 
     def __init__(self):
         self.read_data()
@@ -216,7 +218,6 @@ class LoadData:
     def create_training_data(self, tfidf):
         index1 = -1
         index2 = -1
-        f = open("sample_output.out", "w")
 
         # Creating additional hash for (QID -> Index of QID in rawSamples)
         j = 0
@@ -224,16 +225,25 @@ class LoadData:
             self.rawSample_indexhash[key] = j
             j += 1
 
-        dictionary, corpus = gf.load_dictcorpus()
+        # Read LSI and LDA Scores from file
+        lsi_scores = []
+        with open('lsi_scores_train.txt') as f:    # Read LSI Scores from file
+            for line in f:
+                lsi_scores.append(str(float(line)))
+        lda_scores = []
+        with open('lda_scores_train.txt') as f:    # Read LDA Scores from file
+            for line in f:
+                lda_scores.append(str(float(line)))
+
+        f = open("sample_output.out", "w")
         for i in range(0, len(self.trainingData)):
-            print i
             index1 = self.rawSample_indexhash[self.trainingData[i][0]]
             index2 = self.rawSample_indexhash[self.trainingData[i][1]]
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.trainingData[i][0], self.trainingData[i][1])
-            lsi_score = gf.get_lsisim(self.data, corpus, self.trainingData[i][0], self.trainingData[i][1])
-            lda_score = gf.get_ldasim(self.data, corpus, self.trainingData[i][0], self.trainingData[i][1])
+            lsi_score = lsi_scores[i]
+            lda_score = lda_scores[i]
             f.write(self.trainingData[i][0] + "," + self.trainingData[i][1] + "," + self.trainingData[i][2][0] + ","
                     + str(similarity1) + "," + str(similarity2) + "," + str(heuristic) +
                     "," +str(lsi_score) + "," + str(lda_score) + "\n")
@@ -266,7 +276,16 @@ class LoadData:
     def create_testing_data(self, tfidf):
         index1 = -1
         index2 = -1
-        dictionary, corpus = gf.load_dictcorpus()
+
+        # Read LSI and LDA Scores from file
+        lsi_scores = []
+        with open('lsi_scores_test.txt') as f:    # Read 1k LSI Scores from file
+            for line in f:
+                lsi_scores.append(str(float(line)))
+        lda_scores = []
+        with open('lda_scores_test.txt') as f:    # Read 1k LDA Scores from file
+            for line in f:
+                lda_scores.append(str(float(line)))
 
         f = open("sample_output.out", "w")
         for i in range(0, len(self.testData)):
@@ -275,11 +294,42 @@ class LoadData:
             similarity1 = tfidf.calc_cosine_similarity(index1, index2)[0][0]  # For Question Text
             similarity2 = tfidf.calc_cosine_similarity_topics(index1, index2)[0][0]  # For Topics
             heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
-            lsi_score = gf.get_lsisim(self.data, corpus, self.testData[i][0], self.testData[i][1])
-            lda_score = gf.get_ldasim(self.data, corpus, self.testData[i][0], self.testData[i][1])
+            lsi_score = lsi_scores[i]
+            lda_score = lda_scores[i]
             f.write(self.testData[i][0] + "," + self.testData[i][1] + "," + str(similarity1) + ","
                     + str(similarity2) + "," + str(heuristic) + ","
                     + str(lsi_score) + "," + str(lda_score) + "\n")
+        f.close()
+
+    def write_lsi(self):
+        # Write LSI train scores into file
+        f = open("lsi_scores_train.txt", "w")
+        for i in range(0, len(self.trainingData)):
+            lsi_score = gf.get_lsisim(self.data, self.corpus, self.trainingData[i][0], self.trainingData[i][1])
+            f.write(str(lsi_score) + "\n")
+        f.close()
+
+        # Write LSI test scores into a file
+        f = open("lsi_scores_test.txt", "w")
+        for i in range(0, len(self.testData)):
+            lsi_score = gf.get_lsisim(self.data, self.corpus, self.testData[i][0], self.testData[i][1])
+            f.write(str(lsi_score) + "\n")
+        f.close()
+
+    def write_lda(self):
+        # Write LSI train scores into file
+        f = open("lda_scores_train.txt", "w")
+        for i in range(0, len(self.trainingData)):
+            lda_score = gf.get_ldasim(self.data, self.corpus, self.trainingData[i][0], self.trainingData[i][1])
+            f.write(str(lda_score) + "\n")
+        f.close()
+
+        # Write LSI test scores into a file
+        f = open("lda_scores_test.txt", "w")
+        for i in range(0, len(self.testData)):
+            lda_score = gf.get_ldasim(self.data, self.corpus, self.testData[i][0], self.testData[i][1])
+            f.write(str(lda_score) + "\n")
+        f.close()
 
     def test_model(self):
             data = pd.read_csv('sample_output.out', header=None,
@@ -339,12 +389,15 @@ ld.parse_questions()
 # Step 4 - Create tf-idf matrix for all documents
 tfidf.create_tfidf_matrix(ld.get_rawsamples())
 tfidf.create_tfidf_topics(ld.get_rawsamples())
-# Step 5 - Call cosine similarity for test pairs and accuracy
-# ld.test_data(tfidf)
-# ld.test_accuracy()
 
 # ML Method
-# Create training data and train a model using logistic regression.
+if not os.path.isfile("lsi_scores_train.txt"):  # Checking if LSI scores are already stored in file!
+    print "Writing LSI Scores to files"
+    ld.write_lsi()
+if not os.path.isfile("lda_scores_train.txt"):  # Checking if LDA scores are already stored in file!
+    print "Writing LDA Scores to files"
+    ld.write_lda()
+
 print "Forming Training Data set"
 ld.create_training_data(tfidf)
 print "Creating Model"
@@ -353,5 +406,3 @@ print "Forming Testing Data set"
 ld.create_testing_data(tfidf)
 print "Testing Model!"
 ld.test_model()
-
-
