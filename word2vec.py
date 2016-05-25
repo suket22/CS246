@@ -7,6 +7,8 @@ from calcAccuracy import test_accuracy
 import csv
 
 x = []
+
+
 def isSimilar(model, questionText1, questionText2, filename, useCosine):
     question1_vector = np.zeros((300), dtype=np.float32)
     question2_vector = np.zeros((300), dtype=np.float32)
@@ -20,21 +22,21 @@ def isSimilar(model, questionText1, questionText2, filename, useCosine):
             question2_vector += model[word]
         except:
             pass
-    #cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
-    
-    
+    # cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
+
+
 
     if useCosine:
         cosine_sim = 1 - spatial.distance.cosine(question1_vector, question2_vector)
         x.append(cosine_sim)
         print cosine_sim
-        f = open(filename,'a')
-    	f.write(questionText1 + "," + questionText2 + "," + repr(cosine_sim) + "\n")
-    	f.close()
-    	if cosine_sim > 0.90:
-        	return 1
-   	 return 0
-  
+        f = open(filename, 'a')
+        f.write(questionText1 + "," + questionText2 + "," + repr(cosine_sim) + "\n")
+        f.close()
+        if cosine_sim > 0.90:
+            return 1
+            return 0
+
     else:
         difference = abs(question1_vector - question2_vector)
         norm = LA.norm(difference)
@@ -43,11 +45,13 @@ def isSimilar(model, questionText1, questionText2, filename, useCosine):
             return 1
         return 0
 
+
 def get_cosinefile(filename):
     f = open(filename, "w")
     for item in x:
-        f.write(str(item)+"\n")
+        f.write(str(item) + "\n")
     f.close()
+
 
 def fire_word2vec(data, model, filename, useCosine):
     f = open(filename, "w")
