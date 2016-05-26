@@ -32,6 +32,7 @@ class LoadData:
     rawSample_indexhash = dict()
     data = Data()
     dictionary, corpus = gf.load_dictcorpus()
+    feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V']
 
     def __init__(self):
         self.read_data()
@@ -264,8 +265,7 @@ class LoadData:
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V']
-            X = data[feature_cols]
+            X = data[self.feature_cols]
             y = data.Similarity
 
             # instantiate, fit
@@ -355,8 +355,7 @@ class LoadData:
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V']
-            X = data[feature_cols]
+            X = data[self.feature_cols]
 
             # Predict Values
             # yhat = self.model_logistic.predict(X)
