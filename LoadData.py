@@ -12,6 +12,7 @@ from sklearn import svm
 from sklearn import linear_model
 from Data import Data
 import GensimFunctions as gf
+from sklearn.preprocessing import Imputer
 import os.path
 
 
@@ -225,7 +226,7 @@ class LoadData:
             self.rawSample_indexhash[key] = j
             j += 1
 
-        # Read LSI and LDA Scores from file
+        # Read LSI, LDA and Word2Vec Scores from file
         lsi_scores = []
         with open('lsi_scores_train.txt') as f:    # Read LSI Scores from file
             for line in f:
@@ -234,6 +235,13 @@ class LoadData:
         with open('lda_scores_train.txt') as f:    # Read LDA Scores from file
             for line in f:
                 lda_scores.append(str(float(line)))
+        word2vec_scores = []
+        with open('word2vec_cosine_train.txt') as f:    # Read Word2Vec Scores from file
+            for line in f:
+                word2vec_scores.append(str(float(line)))
+        for i in range(0, len(word2vec_scores)):    # Replace NaNs with zero
+            if word2vec_scores[i] == "nan":
+                word2vec_scores[i] = "0.0"
 
         f = open("sample_output.out", "w")
         for i in range(0, len(self.trainingData)):
@@ -244,33 +252,35 @@ class LoadData:
             heuristic = self.heuristic_synscore(self.trainingData[i][0], self.trainingData[i][1])
             lsi_score = lsi_scores[i]
             lda_score = lda_scores[i]
+            word2vec_score = word2vec_scores[i]
             f.write(self.trainingData[i][0] + "," + self.trainingData[i][1] + "," + self.trainingData[i][2][0] + ","
                     + str(similarity1) + "," + str(similarity2) + "," + str(heuristic) +
-                    "," +str(lsi_score) + "," + str(lda_score) + "\n")
+                    "," +str(lsi_score) + "," + str(lda_score) + "," + str(word2vec_score) + "\n")
         f.close()
 
     def create_model(self):
             data = pd.read_csv('sample_output.out', header=None,
-                               names=['QID1', 'QID2', 'Similarity', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA'])
+                               names=['QID1', 'QID2', 'Similarity', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V'])
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA']
+            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V']
             X = data[feature_cols]
             y = data.Similarity
 
             # instantiate, fit
             self.model_SVM = svm.SVC()
             self.model_SVM.fit(X, y)
-            self.model_logistic = LogisticRegression()
-            self.model_logistic.fit(X, y)
+
             # self.model_logistic = RandomForestClassifier(n_estimators=10)
             # self.model_logistic.fit(X, y)
 
             # self.model_linear = linear_model.LinearRegression()
             # self.model_linear.fit(X, y)
 
-            # Model creation
+            # Checking how good logistic fits on training. (Should probably try doing this for SVM)
+            self.model_logistic = LogisticRegression()
+            self.model_logistic.fit(X, y)
             print "Accuracy on Training Data", self.model_logistic.score(X, y)
 
     def create_testing_data(self, tfidf):
@@ -286,6 +296,13 @@ class LoadData:
         with open('lda_scores_test.txt') as f:    # Read 1k LDA Scores from file
             for line in f:
                 lda_scores.append(str(float(line)))
+        word2vec_scores = []
+        with open('word2vec_cosine_test.txt') as f:    # Read Word2Vec Scores from file
+            for line in f:
+                word2vec_scores.append(str(float(line)))
+        for i in range(0, len(word2vec_scores)):    # Replace NaNs with zero
+            if word2vec_scores[i] == "nan":
+                word2vec_scores[i] = "0.0"
 
         f = open("sample_output.out", "w")
         for i in range(0, len(self.testData)):
@@ -296,9 +313,10 @@ class LoadData:
             heuristic = self.heuristic_synscore(self.testData[i][0], self.testData[i][1])
             lsi_score = lsi_scores[i]
             lda_score = lda_scores[i]
+            word2vec_score = word2vec_scores[i]
             f.write(self.testData[i][0] + "," + self.testData[i][1] + "," + str(similarity1) + ","
                     + str(similarity2) + "," + str(heuristic) + ","
-                    + str(lsi_score) + "," + str(lda_score) + "\n")
+                    + str(lsi_score) + "," + str(lda_score) + "," + str(word2vec_score) + "\n")
         f.close()
 
     def write_lsi(self):
@@ -333,11 +351,11 @@ class LoadData:
 
     def test_model(self):
             data = pd.read_csv('sample_output.out', header=None,
-                               names=['QID1', 'QID2', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA'])
+                               names=['QID1', 'QID2', 'TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V'])
             print data.head()
             print data.shape
 
-            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA']
+            feature_cols = ['TFIDF', 'Topic', 'Synonym', 'LSI', 'LDA', 'W2V']
             X = data[feature_cols]
 
             # Predict Values
