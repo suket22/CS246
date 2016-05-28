@@ -255,28 +255,28 @@ def heuristic_synscore(questionText1, questionText2, info_content_norm):
 def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue):
     f_true = open(filenametrue, "w")
     # f_false = open(filenamefalse, "w")
-    for i in range(0, len(data.testData)):
+    for i in range(0, 10):
         print ">>> Data Sample " + str(i + 1)
         
-        questionKey1 = data.testData[i][0]
+        questionKey1 = data.trainData[i][0]
         rawSamplesKey1 = keyToIndex[questionKey1]
         questionText1 = rawSamples[rawSamplesKey1][0]
         
-        questionKey2 = data.testData[i][1]
+        questionKey2 = data.trainData[i][1]
         rawSamplesKey2 = keyToIndex[questionKey2]
         questionText2 = rawSamples[rawSamplesKey2][0]
         
         sim_score_true = heuristic_synscore(questionText1, questionText2, True)
-        if sim_score_true >= 0.84: 
-            sim_score_true = 1
-        else: sim_score_true = 0
+        # if sim_score_true >= 0.84: 
+        #     sim_score_true = 1
+        # else: sim_score_true = 0
 #         
         # sim_score_false = heuristic_synscore(questionText1, questionText2, False)
         # if sim_score_false >= 0.6: 
         #     sim_score_false = 1
         # else: sim_score_false = 0
         
-        f_true.write(data.testData[i][0] + " " + data.testData[i][1] + " " + str(sim_score_true) + "\n")
+        f_true.write(str(sim_score_true) + "\n")
         # f_false.write(data.testData[i][0] + " " + data.testData[i][1] + " " + str(sim_score_false) + "\n")
         #f_true.write(data.testData[i][0] + " " + questionText1 + data.testData[i][1] + questionText2 + " " + str(sim_score_true) + "\n")
         #f_false.write(data.testData[i][0] + " " + questionText1 + data.testData[i][1] + questionText2 + " " + str(sim_score_false) + "\n")
@@ -285,7 +285,7 @@ def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue):
 
 data = Data()
 rawSamples = data.get_rawsamples()
-fire_wordnet_sim(data, rawSamples, data.keyToIndex, "wordnet_true.out")
+fire_wordnet_sim(data, rawSamples, data.keyToIndex, "wordnet_true_train_values.out")
 
-print('----------RESULTS----------------')
-test_accuracy("wordnet_true.out")
+# print('----------RESULTS----------------')
+# test_accuracy("wordnet_true_train_values.out")
