@@ -252,7 +252,7 @@ def heuristic_synscore(questionText1, questionText2, info_content_norm):
         return DELTA * semantic_similarity(questionText1, questionText2, info_content_norm) + \
         (1.0 - DELTA) * word_order_similarity(questionText1, questionText2)
 
-def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue,threshold):
+def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue):
     f_true = open(filenametrue, "w")
     # f_false = open(filenamefalse, "w")
     for i in range(0, len(data.testData)):
@@ -267,7 +267,7 @@ def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue,threshold):
         questionText2 = rawSamples[rawSamplesKey2][0]
         
         sim_score_true = heuristic_synscore(questionText1, questionText2, True)
-        if sim_score_true >= threshold: 
+        if sim_score_true >= 0.84: 
             sim_score_true = 1
         else: sim_score_true = 0
 #         
@@ -285,14 +285,7 @@ def fire_wordnet_sim(data, rawSamples, keyToIndex, filenametrue,threshold):
 
 data = Data()
 rawSamples = data.get_rawsamples()
-thres_range = np.arange(0.65, 0.7, 0.01)
-for threshold in thres_range:
-    #fire_wordnet_sim(data, rawSamples, data.keyToIndex, "wordnet_true_"+i+".out", "wordnet_false_"+i+".out", threshold)
-    fire_wordnet_sim(data, rawSamples, data.keyToIndex, "wordnet_true_" + str(threshold) + ".out", threshold)
+fire_wordnet_sim(data, rawSamples, data.keyToIndex, "wordnet_true.out")
 
-
-    print('----------Accuracy with normalized for threshold: '+ str(threshold) +'-----------------')
-    test_accuracy("wordnet_true_"+i+".out")
-
-    # print('----------Accuracy without normalized-----------------')
-    # test_accuracy("wordnet_false_"+i+".out")
+print('----------RESULTS----------------')
+test_accuracy("wordnet_true.out")
